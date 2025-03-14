@@ -1,19 +1,13 @@
 const std = @import("std");
-const str = @import("string.zig");
 const ctime = @cImport({
     @cInclude("time.h");
 });
 
-
-
-var global_logger = Logger{
+pub var global_logger: Logger = Logger{
     .log_level = null,
     .timestamp = false,
     .threadname = false,
-    .buffsize = 512,
 };
-
-
 
 
 pub const LogLevel = enum {
@@ -24,13 +18,10 @@ pub const LogLevel = enum {
     fatal,
 };
 
-
-
 const Logger = struct {
     log_level: ?LogLevel,
     timestamp: bool,
     threadname: bool,
-    buffsize: comptime_int,
 
     const Self = @This();
 
@@ -38,10 +29,6 @@ const Logger = struct {
         if (self.log_level == null) return;
 
         if (@intFromEnum(level) >= @intFromEnum(self.log_level.?)) {
-            const logbuff = str.FixedString(self.buffsize).init();
-
-            logbuff.append(levelIntoColor(level));
-            logbuff.append(levelIntoString(level));
 
             if (self.timestamp) {
                 var now: ctime.time_t = undefined;
@@ -50,19 +37,25 @@ const Logger = struct {
                 const asctime = ctime.asctime(timeinfo);
                 const slice = cStringToSlice(asctime);
                 const fasctime = removeNewline(slice);
-                logbuff.append(fasctime);
+                std.debug.print("{s}[{s}]\t{s}  {s} {s}\n", .{
+                    levelIntoColor(level),
+                    levelIntoString(level),
+                    fasctime,
+                    resetColor(),
+                    message
+                });
+                return;
             }
-
-            logbuff.append(resetColor() + "\t");
-            logbuff.append(message + "\n");
-
-            const slice = logbuff.slice();
-
-            std.debug.print("{s}", .{slice});
+            std.debug.print("{s}[{s}]{s}\t {s}\n", .{
+                levelIntoColor(level),
+                levelIntoString(level),
+                resetColor(),
+                message
+            });
         }
     }
 
-    inline fn levelIntoString(comptime level: LogLevel) []const u8 {
+    fn levelIntoString(comptime level: LogLevel) []const u8 {
         return switch (level) {
             .trace => "TRACE",
             .debug => "DEBUG",
@@ -72,7 +65,7 @@ const Logger = struct {
         };
     }
 
-    inline fn levelIntoColor(comptime level: LogLevel) []const u8 {
+    fn levelIntoColor(comptime level: LogLevel) []const u8 {
         return switch (level) {
             .trace => "\x1b[34m", // Blue
             .debug => "\x1b[36m", // Cyan
@@ -82,11 +75,11 @@ const Logger = struct {
         };
     }
 
-    inline fn resetColor() []const u8 {
+    fn resetColor() []const u8 {
         return "\x1b[0m";
     }
 
-    inline fn cStringToSlice(c_string: [*c]u8) []u8 {
+    fn cStringToSlice(c_string: [*c]u8) []u8 {
         var len: usize = 0;
         while (c_string[len] != 0) {
             len += 1;
@@ -94,7 +87,7 @@ const Logger = struct {
         return c_string[0..len];
     }
 
-    inline fn removeNewline(input: []u8) []u8 {
+    fn removeNewline(input: []u8) []u8 {
         var j: usize = 0;
         for (input) |c| {
             if (c != '\n' and c != '\r') {
@@ -107,39 +100,34 @@ const Logger = struct {
 
 };
 
-
-pub inline fn setBufferSize(size: comptime_int) void {
-    global_logger.buffsize = size;
-}
-
-pub inline fn witnThreadName(comptime threadname: bool) void {
+pub fn witnThreadName(comptime threadname: bool) void {
     global_logger.threadname = threadname;
 }
 
-pub inline fn withTime(comptime timestamp: bool) void {
+pub fn withTime(comptime timestamp: bool) void {
     global_logger.timestamp = timestamp;
 }
 
-pub inline fn setLogLevel(comptime level: ?LogLevel) void {
+pub fn setLogLevel(comptime level: ?LogLevel) void {
     global_logger.log_level = level;
 }
 
-pub inline fn trace(comptime message: []const u8) void {
+pub fn trace(comptime message: []const u8) void {
     global_logger.log(LogLevel.trace, message);
 }
 
-pub inline fn debug(comptime message: []const u8) void {
+pub fn debug(comptime message: []const u8) void {
     global_logger.log(LogLevel.debug, message);
 }
 
-pub inline fn info(comptime message: []const u8) void {
+pub fn info(comptime message: []const u8) void {
     global_logger.log(LogLevel.info, message);
 }
 
-pub inline fn warn(comptime message: []const u8) void {
+pub fn warn(comptime message: []const u8) void {
     global_logger.log(LogLevel.warn, message);
 }
 
-pub inline fn fatal(comptime message: []const u8) void {
+pub fn fatal(comptime message: []const u8) void {
     global_logger.log(LogLevel.fatal, message);
 }
