@@ -2,6 +2,10 @@
 
 ![logs screenshot](resources/screenshot.png)
 
+And with thread names (you need to set the thread name)
+
+![thread names](resources/threadnames.png)
+
 # Usage
 ```zig
 const log = @import("root.zig");
