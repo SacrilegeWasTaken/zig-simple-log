@@ -1,12 +1,14 @@
 const std = @import("std");
-const ctime = @cImport({
+const c = @cImport({
     @cInclude("time.h");
+    @cInclude("pthread/pthread.h");
 });
 
 var global_logger: Logger = Logger{
     .log_level = null,
     .timestamp = false,
     .threadname = false,
+    .nii = false,
 };
 
 
@@ -22,6 +24,7 @@ const Logger = struct {
     log_level: ?LogLevel,
     timestamp: bool,
     threadname: bool,
+    nii: bool,
 
     const Self = @This();
 
@@ -41,10 +44,10 @@ const Logger = struct {
                 logWithTime(src, message, level, args);
             }
             else if(self.timestamp and self.threadname) {
-                logWithThreadAndTime(src, message, level, args);
+                self.logWithThreadAndTime(src, message, level, args);
             }
             else if(!self.timestamp and self.threadname) {
-                logWithThread(src, message, level, args);
+                self.logWithThread(src, message, level, args);
             }
             else {
                 logSimple(src, message, level, args);
@@ -72,12 +75,32 @@ const Logger = struct {
 
 
     inline fn logWithThread(
+        self: *Self,
         comptime src: std.builtin.SourceLocation,
         comptime message: []const u8,
         comptime level: LogLevel,
         args: anytype
     ) void
     {
+        if (self.nii) {
+            var buffer: [128]u8 = undefined;
+            @memset(&buffer, 0);
+
+            const pthread_t = c.pthread_self();
+            _ = c.pthread_getname_np(pthread_t, &buffer, @sizeOf([128]u8));
+
+            std.debug.print("{s}[{s}]\t{s}:{d} TID: {s} {s} " ++ message ++ "\n", .{
+                levelIntoColor(level),
+                levelIntoString(level),
+                src.file,
+                src.line,
+                buffer[0..buffer.len],
+                resetColor(),
+            } ++ args);
+
+            return;
+        }
+
         const threadname = std.Thread.getCurrentId();
         std.debug.print("{s}[{s}]\t{s}:{d} TID: {d}{s} " ++ message ++ "\n", .{
             levelIntoColor(level),
@@ -91,25 +114,49 @@ const Logger = struct {
 
 
     inline fn logWithThreadAndTime(
+        self: *Self,
         comptime src: std.builtin.SourceLocation,
         comptime message: []const u8,
         comptime level: LogLevel,
         args: anytype
     ) void
     {
-        var now: ctime.time_t = undefined;
-        _ = ctime.time(&now);
-        const timeinfo = ctime.localtime(&now);
-        const asctime = ctime.asctime(timeinfo);
+        var now: c.time_t = undefined;
+        _ = c.time(&now);
+        const timeinfo = c.localtime(&now);
+        const asctime = c.asctime(timeinfo);
         const slice = cStringToSlice(asctime);
         const fasctime = removeNewline(slice);
-        const threadname = std.Thread.getCurrentId();
-        std.debug.print("{s}[{s}]\t{s}:{d} TID: {d}\t{s}{s} " ++ message ++ "\n", .{
+
+        if (self.nii) {
+            var buffer: [128]u8 = undefined;
+            @memset(&buffer, 0);
+
+            const pthread_t = c.pthread_self();
+            _ = c.pthread_getname_np(pthread_t, &buffer, @sizeOf([128]u8));
+
+
+            std.debug.print("{s}[{s}]\t{s}:{d} TID: {s}  {s}{s} " ++ message ++ "\n", .{
+                levelIntoColor(level),
+                levelIntoString(level),
+                src.file,
+                src.line,
+                buffer[0..buffer.len],
+                fasctime,
+                resetColor(),
+            } ++ args);
+
+            return;
+        }
+
+        const threadid = std.Thread.getCurrentId();
+
+        std.debug.print("{s}[{s}]\t{s}:{d} TID: {d} {s}{s} " ++ message ++ "\n", .{
             levelIntoColor(level),
             levelIntoString(level),
             src.file,
             src.line,
-            threadname,
+            threadid,
             fasctime,
             resetColor(),
         } ++ args);
@@ -123,10 +170,10 @@ const Logger = struct {
         args: anytype
     ) void
     {
-        var now: ctime.time_t = undefined;
-        _ = ctime.time(&now);
-        const timeinfo = ctime.localtime(&now);
-        const asctime = ctime.asctime(timeinfo);
+        var now: c.time_t = undefined;
+        _ = c.time(&now);
+        const timeinfo = c.localtime(&now);
+        const asctime = c.asctime(timeinfo);
         const slice = cStringToSlice(asctime);
         const fasctime = removeNewline(slice);
         std.debug.print("{s}[{s}]\t{s}:{d} {s}{s} " ++ message ++ "\n", .{
@@ -138,6 +185,7 @@ const Logger = struct {
             resetColor(),
         } ++ args);
     }
+
 
     inline fn levelIntoString(comptime level: LogLevel) []const u8 {
         return switch (level) {
@@ -173,9 +221,9 @@ const Logger = struct {
 
     inline fn removeNewline(input: []u8) []u8 {
         var j: usize = 0;
-        for (input) |c| {
-            if (c != '\n' and c != '\r') {
-                input[j] = c;
+        for (input) |cc| {
+            if (cc != '\n' and cc != '\r') {
+                input[j] = cc;
                 j += 1;
             }
         }
@@ -184,7 +232,11 @@ const Logger = struct {
 
 };
 
-pub inline fn withThreadName(comptime threadname: bool) void {
+pub inline fn useThreadName(comptime use: bool) void {
+    global_logger.nii = use;
+}
+
+pub inline fn withThreadID(comptime threadname: bool) void {
     global_logger.threadname = threadname;
 }
 
