@@ -4,6 +4,8 @@
 
 # Usage
 ```zig
+const log = @import("root.zig");
+
 pub fn main() !void {
     log.setLogLevel(log.LogLevel.trace);
     log.withTime(true);

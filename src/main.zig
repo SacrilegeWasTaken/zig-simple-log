@@ -7,10 +7,8 @@ const c = @cImport({
 
 pub fn main() !void {
     var buffer: [128]u8 = undefined;
-    @memset(&buffer, 0); // Инициализируем буфер нулями
+    @memset(&buffer, 0);
 
-
-    // Устанавливаем имя основного потока
     const mainThreadName = "MainThread";
     const setNameResult = c.pthread_setname_np(mainThreadName);
     if (setNameResult != 0) {
