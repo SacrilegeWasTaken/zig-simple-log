@@ -4,12 +4,49 @@ const c = @cImport({
     @cInclude("pthread/pthread.h");
 });
 
+
 var global_logger: Logger = Logger{
     .log_level = null,
     .timestamp = false,
     .threadname = false,
     .nii = false,
 };
+
+pub inline fn useThreadName(comptime use: bool) void {
+    global_logger.nii = use;
+}
+
+pub inline fn withThreadID(comptime threadname: bool) void {
+    global_logger.threadname = threadname;
+}
+
+pub inline fn withTime(comptime timestamp: bool) void {
+    global_logger.timestamp = timestamp;
+}
+
+pub inline fn setLogLevel(comptime level: ?LogLevel) void {
+    global_logger.log_level = level;
+}
+
+pub inline fn trace(comptime src: std.builtin.SourceLocation, comptime message: []const u8, args: anytype) void {
+    global_logger.log(src, LogLevel.trace, message, args);
+}
+
+pub inline fn debug(comptime src: std.builtin.SourceLocation, comptime message: []const u8, args: anytype) void {
+    global_logger.log(src, LogLevel.debug, message, args);
+}
+
+pub inline fn info(comptime src: std.builtin.SourceLocation, comptime message: []const u8, args: anytype) void {
+    global_logger.log(src, LogLevel.info, message, args);
+}
+
+pub inline fn warn(comptime src: std.builtin.SourceLocation, comptime message: []const u8, args: anytype) void {
+    global_logger.log(src, LogLevel.warn, message, args);
+}
+
+pub inline fn fatal(comptime src: std.builtin.SourceLocation, comptime message: []const u8, args: anytype) void {
+    global_logger.log(src, LogLevel.fatal, message, args);
+}
 
 
 pub const LogLevel = enum {
@@ -19,6 +56,7 @@ pub const LogLevel = enum {
     warn,
     fatal,
 };
+
 
 const Logger = struct {
     log_level: ?LogLevel,
@@ -229,41 +267,4 @@ const Logger = struct {
         }
         return input[0..j];
     }
-
 };
-
-pub inline fn useThreadName(comptime use: bool) void {
-    global_logger.nii = use;
-}
-
-pub inline fn withThreadID(comptime threadname: bool) void {
-    global_logger.threadname = threadname;
-}
-
-pub inline fn withTime(comptime timestamp: bool) void {
-    global_logger.timestamp = timestamp;
-}
-
-pub inline fn setLogLevel(comptime level: ?LogLevel) void {
-    global_logger.log_level = level;
-}
-
-pub inline fn trace(comptime src: std.builtin.SourceLocation, comptime message: []const u8, args: anytype) void {
-    global_logger.log(src, LogLevel.trace, message, args);
-}
-
-pub inline fn debug(comptime src: std.builtin.SourceLocation, comptime message: []const u8, args: anytype) void {
-    global_logger.log(src, LogLevel.debug, message, args);
-}
-
-pub inline fn info(comptime src: std.builtin.SourceLocation, comptime message: []const u8, args: anytype) void {
-    global_logger.log(src, LogLevel.info, message, args);
-}
-
-pub inline fn warn(comptime src: std.builtin.SourceLocation, comptime message: []const u8, args: anytype) void {
-    global_logger.log(src, LogLevel.warn, message, args);
-}
-
-pub inline fn fatal(comptime src: std.builtin.SourceLocation, comptime message: []const u8, args: anytype) void {
-    global_logger.log(src, LogLevel.fatal, message, args);
-}
