@@ -6,15 +6,8 @@ const c = @cImport({
 });
 
 pub fn main() !void {
-    var buffer: [128]u8 = undefined;
-    @memset(&buffer, 0);
 
-    const mainThreadName = "MainThread";
-    const setNameResult = c.pthread_setname_np(mainThreadName);
-    if (setNameResult != 0) {
-        std.debug.print("Failed to set main thread name: {}\n", .{setNameResult});
-        return;
-    }
+    _ = c.pthread_setname_np("MainThread");
 
     log.setLogLevel(log.LogLevel.trace);
     log.withTime(true);
