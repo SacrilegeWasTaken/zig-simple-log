@@ -4,7 +4,6 @@ const c = @cImport({
     @cInclude("pthread/pthread.h");
 });
 
-
 var global_logger: Logger = Logger{
     .log_level = null,
     .timestamp = false,
@@ -48,7 +47,6 @@ pub inline fn fatal(comptime src: std.builtin.SourceLocation, comptime message: 
     global_logger.log(src, LogLevel.fatal, message, args);
 }
 
-
 pub const LogLevel = enum {
     trace,
     debug,
@@ -56,7 +54,6 @@ pub const LogLevel = enum {
     warn,
     fatal,
 };
-
 
 const Logger = struct {
     log_level: ?LogLevel,
@@ -66,64 +63,30 @@ const Logger = struct {
 
     const Self = @This();
 
-    inline fn log(
-        self: *Self,
-        comptime src: std.builtin.SourceLocation,
-        comptime level: LogLevel,
-        comptime message: []const u8,
-        args: anytype
-    ) void
-    {
+    inline fn log(self: *Self, comptime src: std.builtin.SourceLocation, comptime level: LogLevel, comptime message: []const u8, args: anytype) void {
         if (self.log_level == null) return;
 
         if (@intFromEnum(level) >= @intFromEnum(self.log_level.?)) {
-
             if (self.timestamp and !self.threadname) {
                 logWithTime(src, message, level, args);
-            }
-            else if(self.timestamp and self.threadname) {
+            } else if (self.timestamp and self.threadname) {
                 self.logWithThreadAndTime(src, message, level, args);
-            }
-            else if(!self.timestamp and self.threadname) {
+            } else if (!self.timestamp and self.threadname) {
                 self.logWithThread(src, message, level, args);
-            }
-            else {
+            } else {
                 logSimple(src, message, level, args);
             }
-
         }
     }
 
-
-    inline fn logSimple(
-        comptime src: std.builtin.SourceLocation,
-        comptime message: []const u8,
-        comptime level: LogLevel,
-        args: anytype
-    ) void
-    {
-        std.debug.print("{s}[{s}]\t{s}:{d} {s} " ++ message ++ "\n", .{
-            levelIntoColor(level),
-            levelIntoString(level),
-            src.file,
-            src.line,
-            resetColor()
-        } ++ args);
+    inline fn logSimple(comptime src: std.builtin.SourceLocation, comptime message: []const u8, comptime level: LogLevel, args: anytype) void {
+        std.debug.print("{s}[{s}]\t{s}:{d} {s} " ++ message ++ "\n", .{ levelIntoColor(level), levelIntoString(level), src.file, src.line, resetColor() } ++ args);
     }
 
-
-    inline fn logWithThread(
-        self: *Self,
-        comptime src: std.builtin.SourceLocation,
-        comptime message: []const u8,
-        comptime level: LogLevel,
-        args: anytype
-    ) void
-    {
+    inline fn logWithThread(self: *Self, comptime src: std.builtin.SourceLocation, comptime message: []const u8, comptime level: LogLevel, args: anytype) void {
         if (self.nii) {
             var buffer: [128]u8 = undefined;
             @memset(&buffer, 0);
-
             const pthread_t = c.pthread_self();
             _ = c.pthread_getname_np(pthread_t, &buffer, @sizeOf([128]u8));
 
@@ -150,15 +113,7 @@ const Logger = struct {
         } ++ args);
     }
 
-
-    inline fn logWithThreadAndTime(
-        self: *Self,
-        comptime src: std.builtin.SourceLocation,
-        comptime message: []const u8,
-        comptime level: LogLevel,
-        args: anytype
-    ) void
-    {
+    inline fn logWithThreadAndTime(self: *Self, comptime src: std.builtin.SourceLocation, comptime message: []const u8, comptime level: LogLevel, args: anytype) void {
         var now: c.time_t = undefined;
         _ = c.time(&now);
         const timeinfo = c.localtime(&now);
@@ -172,7 +127,6 @@ const Logger = struct {
 
             const pthread_t = c.pthread_self();
             _ = c.pthread_getname_np(pthread_t, &buffer, @sizeOf([128]u8));
-
 
             std.debug.print("{s}[{s}]\t{s}:{d} TID: {s}  {s}{s} " ++ message ++ "\n", .{
                 levelIntoColor(level),
@@ -200,14 +154,7 @@ const Logger = struct {
         } ++ args);
     }
 
-
-    inline fn logWithTime(
-        comptime src: std.builtin.SourceLocation,
-        comptime message: []const u8,
-        comptime level: LogLevel,
-        args: anytype
-    ) void
-    {
+    inline fn logWithTime(comptime src: std.builtin.SourceLocation, comptime message: []const u8, comptime level: LogLevel, args: anytype) void {
         var now: c.time_t = undefined;
         _ = c.time(&now);
         const timeinfo = c.localtime(&now);
@@ -224,7 +171,6 @@ const Logger = struct {
         } ++ args);
     }
 
-
     inline fn levelIntoString(comptime level: LogLevel) []const u8 {
         return switch (level) {
             .trace => "TRACE",
@@ -239,8 +185,8 @@ const Logger = struct {
         return switch (level) {
             .trace => "\x1b[34m", // Blue
             .debug => "\x1b[36m", // Cyan
-            .info => "\x1b[35m",  // Green
-            .warn => "\x1b[33m",  // Yellow
+            .info => "\x1b[35m", // Green
+            .warn => "\x1b[33m", // Yellow
             .fatal => "\x1b[31m", // Red
         };
     }

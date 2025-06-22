@@ -6,7 +6,6 @@ const c = @cImport({
 });
 
 pub fn main() !void {
-
     _ = c.pthread_setname_np("MainThread");
 
     log.setLogLevel(log.LogLevel.trace);
